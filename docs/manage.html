@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>龙虾 AI 导航 — 新闻管理中心</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0f1e;
+      --bg-secondary: #111827;
+      --bg-card: rgba(255,255,255,0.04);
+      --border: rgba(0,229,204,0.15);
+      --accent: #00e5cc;
+      --accent-glow: rgba(0,229,204,0.3);
+      --text-primary: #f0f4f8;
+      --text-secondary: rgba(255,255,255,0.55);
+      --danger: #ff4d6d;
+      --warning: #ffd60a;
+      --purple: #bf5af2;
+      --radius: 14px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, rgba(0,229,204,0.08), rgba(191,90,242,0.06));
+      border-bottom: 1px solid var(--border);
+      padding: 28px 24px 24px;
+      text-align: center;
+    }
+    .header-icon { font-size: 48px; margin-bottom: 8px; }
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 4px;
+    }
+    .header p { color: var(--text-secondary); font-size: 14px; }
+
+    /* Container */
+    .container { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+
+    /* Stats Bar */
+    .stats-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      flex: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+    }
+    .stat-card .num {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .stat-card .label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 18px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .btn:hover {
+      background: rgba(0,229,204,0.1);
+      border-color: var(--accent);
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, rgba(0,229,204,0.2), rgba(0,229,204,0.1));
+      border-color: rgba(0,229,204,0.4);
+      color: var(--accent);
+    }
+    .btn-danger {
+      border-color: rgba(255,77,109,0.3);
+      color: var(--danger);
+    }
+    .btn-danger:hover {
+      background: rgba(255,77,109,0.1);
+      border-color: var(--danger);
+      box-shadow: 0 0 20px rgba(255,77,109,0.2);
+    }
+
+    /* News List */
+    .news-list { display: flex; flex-direction: column; gap: 12px; }
+
+    .news-item {
+      background: var(--bg-card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      transition: all 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+    .news-item::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 3px;
+      height: 100%;
+      background: var(--accent);
+      opacity: 0;
+      transition: opacity 0.25s;
+    }
+    .news-item:hover {
+      border-color: var(--border);
+      background: rgba(255,255,255,0.06);
+    }
+    .news-item:hover::before { opacity: 1; }
+
+    .news-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .news-title {
+      font-size: 16px;
+      font-weight: 600;
+      flex: 1;
+    }
+    .news-category {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      background: rgba(0,229,204,0.12);
+      color: var(--accent);
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+    .news-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+    .news-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.35);
+    }
+    .news-meta a {
+      color: var(--accent);
+      text-decoration: none;
+      opacity: 0.7;
+    }
+    .news-meta a:hover { opacity: 1; text-decoration: underline; }
+    .news-actions {
+      display: flex;
+      gap: 6px;
+      margin-left: auto;
+    }
+    .news-actions button {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.1);
+      color: var(--text-secondary);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .news-actions button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .news-actions button.del:hover {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+      width: 100%;
+      max-width: 560px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+      animation: modalIn 0.3s ease;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: translateY(20px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .modal h2 {
+      font-size: 20px;
+      margin-bottom: 20px;
+      color: var(--accent);
+    }
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .form-group select { appearance: none; cursor: pointer; }
+    .modal-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 24px;
+    }
+    .modal-buttons .btn { flex: 1; justify-content: center; }
+
+    /* JSON Output */
+    .json-output {
+      display: none;
+      margin-top: 24px;
+    }
+    .json-output.active { display: block; }
+    .json-output h3 {
+      font-size: 16px;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+    .json-output pre {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      font-size: 12px;
+      color: var(--accent);
+      overflow-x: auto;
+      max-height: 400px;
+      overflow-y: auto;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      background: rgba(0,229,204,0.15);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 2000;
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: all 0.3s;
+      pointer-events: none;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+    }
+    .empty-state .icon { font-size: 56px; margin-bottom: 16px; }
+    .empty-state h3 { font-size: 18px; color: var(--text-primary); margin-bottom: 8px; }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .stats-bar { flex-direction: column; }
+      .toolbar { flex-direction: column; }
+      .btn { justify-content: center; }
+      .modal { padding: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-icon">🦞</div>
+    <h1>龙虾 AI 新闻管理中心</h1>
+    <p>编辑新闻 → 生成 JSON → 提交到 GitHub → App 自动同步</p>
+  </div>
+
+  <div class="container">
+    <!-- Stats -->
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div class="num" id="totalCount">0</div>
+        <div class="label">总新闻数</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="categoryCount">0</div>
+        <div class="label">分类数</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="lastUpdate">-</div>
+        <div class="label">最后更新</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <button class="btn btn-primary" onclick="openAddModal()">➕ 新增新闻</button>
+      <button class="btn" onclick="generateJSON()">📋 生成 JSON</button>
+      <button class="btn" onclick="loadFromURL()">🔄 从线上加载</button>
+      <button class="btn" onclick="importJSON()">📥 导入 JSON</button>
+    </div>
+
+    <!-- News List -->
+    <div class="news-list" id="newsList"></div>
+
+    <!-- JSON Output -->
+    <div class="json-output" id="jsonOutput">
+      <h3>📋 生成的 JSON（复制后提交到 GitHub）</h3>
+      <pre id="jsonContent"></pre>
+      <div style="margin-top: 12px;">
+        <button class="btn btn-primary" onclick="copyJSON()">📋 复制到剪贴板</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Modal -->
+  <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h2 id="modalTitle">新增新闻</h2>
+      <div class="form-group">
+        <label>标题</label>
+        <input type="text" id="inputTitle" placeholder="例：DeepSeek R2 震撼发布">
+      </div>
+      <div class="form-group">
+        <label>描述</label>
+        <textarea id="inputDesc" placeholder="新闻详细描述..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>分类</label>
+        <select id="inputCategory">
+          <option value="模型热点">模型热点</option>
+          <option value="技术突破">技术突破</option>
+          <option value="智能体">智能体</option>
+          <option value="工具更新">工具更新</option>
+          <option value="行业动态">行业动态</option>
+          <option value="生态报告">生态报告</option>
+          <option value="版本更新">版本更新</option>
+          <option value="开源项目">开源项目</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>链接 (可选)</label>
+        <input type="url" id="inputURL" placeholder="https://...">
+      </div>
+      <div class="modal-buttons">
+        <button class="btn" onclick="closeModalDirect()">取消</button>
+        <button class="btn btn-primary" id="saveBtn" onclick="saveNews()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ── State ──────────────────────────────────────────────
+    let newsList = [];
+    let editingIndex = -1;
+    const API_URL = 'https://jok9580955.github.io/lobster-monitor-station/api/news.json';
+
+    // ── Init ──────────────────────────────────────────────
+    window.addEventListener('DOMContentLoaded', () => {
+      const saved = localStorage.getItem('lobster_news');
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          newsList = data.news || [];
+        } catch(e) {}
+      }
+      if (newsList.length === 0) {
+        loadFromURL();
+      } else {
+        render();
+      }
+    });
+
+    // ── Load from GitHub Pages ────────────────────────────
+    function loadFromURL() {
+      showToast('🔄 正在从线上加载...');
+      fetch(API_URL + '?t=' + Date.now())
+        .then(r => r.json())
+        .then(data => {
+          newsList = data.news || [];
+          localStorage.setItem('lobster_news', JSON.stringify(data));
+          render();
+          showToast('✅ 已加载 ' + newsList.length + ' 条新闻');
+        })
+        .catch(err => {
+          showToast('⚠️ 加载失败，使用本地数据');
+          console.error(err);
+        });
+    }
+
+    // ── Render ────────────────────────────────────────────
+    function render() {
+      const container = document.getElementById('newsList');
+      const totalEl = document.getElementById('totalCount');
+      const catEl = document.getElementById('categoryCount');
+      const updateEl = document.getElementById('lastUpdate');
+
+      totalEl.textContent = newsList.length;
+      const categories = new Set(newsList.map(n => n.category));
+      catEl.textContent = categories.size;
+      updateEl.textContent = new Date().toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+
+      if (newsList.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">📰</div>
+            <h3>暂无新闻</h3>
+            <p>点击「新增新闻」添加第一条 AI 资讯</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = newsList.map((news, i) => `
+        <div class="news-item">
+          <div class="news-header">
+            <span class="news-title">${escapeHtml(news.title)}</span>
+            <span class="news-category">${escapeHtml(news.category)}</span>
+          </div>
+          <div class="news-desc">${escapeHtml(news.description)}</div>
+          <div class="news-meta">
+            <span>🕐 ${formatTime(news.timestamp)}</span>
+            ${news.url ? `<a href="${escapeHtml(news.url)}" target="_blank">🔗 ${escapeHtml(news.url)}</a>` : ''}
+            <div class="news-actions">
+              <button onclick="editNews(${i})">✏️ 编辑</button>
+              <button class="del" onclick="deleteNews(${i})">🗑 删除</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ── Modal ─────────────────────────────────────────────
+    function openAddModal() {
+      editingIndex = -1;
+      document.getElementById('modalTitle').textContent = '新增新闻';
+      document.getElementById('inputTitle').value = '';
+      document.getElementById('inputDesc').value = '';
+      document.getElementById('inputCategory').value = '模型热点';
+      document.getElementById('inputURL').value = '';
+      document.getElementById('modalOverlay').classList.add('active');
+    }
+
+    function editNews(index) {
+      editingIndex = index;
+      const news = newsList[index];
+      document.getElementById('modalTitle').textContent = '编辑新闻';
+      document.getElementById('inputTitle').value = news.title;
+      document.getElementById('inputDesc').value = news.description;
+      document.getElementById('inputCategory').value = news.category;
+      document.getElementById('inputURL').value = news.url || '';
+      document.getElementById('modalOverlay').classList.add('active');
+    }
+
+    function closeModal(e) {
+      if (e.target === document.getElementById('modalOverlay')) {
+        closeModalDirect();
+      }
+    }
+
+    function closeModalDirect() {
+      document.getElementById('modalOverlay').classList.remove('active');
+    }
+
+    function saveNews() {
+      const title = document.getElementById('inputTitle').value.trim();
+      const desc = document.getElementById('inputDesc').value.trim();
+      const category = document.getElementById('inputCategory').value;
+      const url = document.getElementById('inputURL').value.trim();
+
+      if (!title || !desc) {
+        showToast('⚠️ 标题和描述不能为空');
+        return;
+      }
+
+      const item = {
+        id: editingIndex >= 0 ? newsList[editingIndex].id : 'n' + Date.now().toString(36),
+        title,
+        description: desc,
+        category,
+        url: url || '',
+        timestamp: editingIndex >= 0 ? newsList[editingIndex].timestamp : new Date().toISOString()
+      };
+
+      if (editingIndex >= 0) {
+        newsList[editingIndex] = item;
+        showToast('✅ 新闻已更新');
+      } else {
+        newsList.unshift(item);
+        showToast('✅ 新闻已添加');
+      }
+
+      saveToLocal();
+      render();
+      closeModalDirect();
+    }
+
+    function deleteNews(index) {
+      if (confirm('确定删除「' + newsList[index].title + '」？')) {
+        newsList.splice(index, 1);
+        saveToLocal();
+        render();
+        showToast('🗑 已删除');
+      }
+    }
+
+    // ── JSON Generation ───────────────────────────────────
+    function generateJSON() {
+      const output = {
+        version: 1,
+        updated: new Date().toISOString(),
+        news: newsList
+      };
+      const jsonStr = JSON.stringify(output, null, 2);
+      document.getElementById('jsonContent').textContent = jsonStr;
+      document.getElementById('jsonOutput').classList.add('active');
+      showToast('✅ JSON 已生成，请复制后提交到 GitHub');
+    }
+
+    function copyJSON() {
+      const text = document.getElementById('jsonContent').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('📋 已复制到剪贴板！');
+      }).catch(() => {
+        showToast('⚠️ 复制失败，请手动复制');
+      });
+    }
+
+    function importJSON() {
+      const input = prompt('粘贴 JSON 内容：');
+      if (!input) return;
+      try {
+        const data = JSON.parse(input);
+        newsList = data.news || [];
+        saveToLocal();
+        render();
+        showToast('✅ 导入成功，共 ' + newsList.length + ' 条');
+      } catch(e) {
+        showToast('⚠️ JSON 格式错误');
+      }
+    }
+
+    // ── Helpers ────────────────────────────────────────────
+    function saveToLocal() {
+      localStorage.setItem('lobster_news', JSON.stringify({
+        version: 1,
+        updated: new Date().toISOString(),
+        news: newsList
+      }));
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.appendChild(document.createTextNode(text || ''));
+      return div.innerHTML;
+    }
+
+    function formatTime(ts) {
+      try {
+        const d = new Date(ts);
+        return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      } catch(e) {
+        return ts;
+      }
+    }
+  </script>
+
+</body>
+</html>

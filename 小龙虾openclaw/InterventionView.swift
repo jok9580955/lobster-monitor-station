@@ -1,6 +1,6 @@
 //
 //  InterventionView.swift
-//  龙虾监测站 — Tab 2: 远程干预
+//  龙虾AI导航 — Tab 2: AI 动态广场
 //
 
 import SwiftUI
@@ -14,29 +14,60 @@ struct InterventionView: View {
             VStack(spacing: 0) {
                 // Segment picker
                 Picker("", selection: $selectedTab) {
-                    Text("待处理 (\(store.pendingAlerts.count))").tag(0)
-                    Text("已处理 (\(store.resolvedAlerts.count))").tag(1)
+                    Text("最新情报 (\(store.pendingNews.count))").tag(0)
+                    Text("历史回顾 (\(store.readNews.count))").tag(1)
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
 
+                // Loading / Error banner
+                if store.isLoadingNews {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .tint(Color(hex: "#00E5CC"))
+                        Text("正在从云端同步...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 8)
+                } else if let error = store.newsError {
+                    HStack(spacing: 6) {
+                        Image(systemName: "wifi.exclamationmark")
+                            .font(.caption)
+                            .foregroundColor(Color(hex: "#FFD60A"))
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(Color(hex: "#FFD60A").opacity(0.8))
+                    }
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 12)
+                    .background(Color(hex: "#FFD60A").opacity(0.08))
+                    .cornerRadius(8)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+                }
+
                 ScrollView {
                     LazyVStack(spacing: 12) {
                         if selectedTab == 0 {
-                            if store.pendingAlerts.isEmpty {
-                                emptyPendingView
+                            if store.pendingNews.isEmpty {
+                                emptyNewsView
                             } else {
-                                ForEach(store.pendingAlerts) { alert in
-                                    PendingAlertRow(alert: alert)
+                                ForEach(store.pendingNews) { news in
+                                    NewsRow(news: news)
+                                        .transition(.asymmetric(
+                                            insertion: .move(edge: .top).combined(with: .opacity),
+                                            removal: .move(edge: .trailing).combined(with: .opacity)
+                                        ))
                                 }
                             }
                         } else {
-                            if store.resolvedAlerts.isEmpty {
-                                emptyResolvedView
+                            if store.readNews.isEmpty {
+                                emptyHistoryView
                             } else {
-                                ForEach(store.resolvedAlerts) { alert in
-                                    ResolvedAlertRow(alert: alert)
+                                ForEach(store.readNews) { news in
+                                    ReadNewsRow(news: news)
                                 }
                             }
                         }
@@ -44,22 +75,36 @@ struct InterventionView: View {
                     .padding(.horizontal, 16)
                     .padding(.bottom, 24)
                 }
+                .refreshable {
+                    await store.refreshNews()
+                }
             }
-            .navigationTitle("远程干预")
+            .navigationTitle("AI 动态广场")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        Task { await store.refreshNews() }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(Color(hex: "#00E5CC"))
+                    }
+                }
+            }
         }
         .animation(.easeInOut(duration: 0.25), value: selectedTab)
     }
 
-    var emptyPendingView: some View {
+    var emptyNewsView: some View {
         VStack(spacing: 16) {
-            Image(systemName: "checkmark.seal.fill")
+            Image(systemName: "newspaper.fill")
                 .font(.system(size: 48))
-                .foregroundColor(Color(hex: "#30D158"))
-            Text("无待处理告警")
+                .foregroundColor(Color(hex: "#00E5CC"))
+            Text("暂无新鲜资讯")
                 .font(.headline)
                 .foregroundColor(.white)
-            Text("Agent 正在自主运行中，所有任务均在权限范围内")
+            Text("AI 世界正在平静地演进，下拉刷新试试")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -68,12 +113,12 @@ struct InterventionView: View {
         .padding(40)
     }
 
-    var emptyResolvedView: some View {
+    var emptyHistoryView: some View {
         VStack(spacing: 16) {
             Image(systemName: "clock.badge.checkmark.fill")
                 .font(.system(size: 48))
                 .foregroundColor(.secondary)
-            Text("暂无处理记录")
+            Text("暂无阅读记录")
                 .font(.headline)
                 .foregroundColor(.secondary)
         }
@@ -82,110 +127,94 @@ struct InterventionView: View {
     }
 }
 
-// MARK: - Pending Alert Row
+// MARK: - News Row
 
-struct PendingAlertRow: View {
+struct NewsRow: View {
     @EnvironmentObject var store: AgentStore
-    let alert: AgentAlert
-    @State private var showingDetail = false
+    let news: AINews
 
     var body: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
                 // Header
                 HStack {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(alert.riskLevel.color)
-                    Text(alert.title)
+                    Image(systemName: "sparkles")
+                        .foregroundColor(Color(hex: "#00E5CC"))
+                    Text(news.title)
                         .font(.headline)
                         .foregroundColor(.white)
                     Spacer()
-                    RiskBadge(level: alert.riskLevel)
+                    CategoryBadge(label: news.category)
                 }
 
                 // Description
-                Text(alert.description)
+                Text(news.description)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .lineLimit(3)
 
-                // Timestamp
-                Text(alert.timestamp.formatted(.relative(presentation: .named)))
-                    .font(.caption)
-                    .foregroundColor(Color(hex: "#00E5CC").opacity(0.7))
+                // URL link
+                if let urlStr = news.url, !urlStr.isEmpty, let url = URL(string: urlStr) {
+                    Link(destination: url) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "link")
+                                .font(.caption2)
+                            Text("查看详情")
+                                .font(.caption)
+                        }
+                        .foregroundColor(Color(hex: "#0A84FF"))
+                    }
+                }
 
-                Divider().background(Color.white.opacity(0.08))
-
-                // Action buttons
-                HStack(spacing: 10) {
-                    ActionButton(
-                        title: "授权",
-                        icon: "checkmark.circle.fill",
-                        color: Color(hex: "#30D158"),
-                        action: { store.approve(alert) }
-                    )
-                    ActionButton(
-                        title: "终止",
-                        icon: "xmark.circle.fill",
-                        color: Color(hex: "#FF4D6D"),
-                        action: { store.reject(alert) }
-                    )
-                    ActionButton(
-                        title: "暂停",
-                        icon: "pause.circle.fill",
-                        color: Color(hex: "#FF9500"),
-                        action: { store.pause(alert) }
-                    )
+                // Timestamp + actions
+                HStack {
+                    Text(news.timestamp.formatted(.relative(presentation: .named)))
+                        .font(.caption)
+                        .foregroundColor(Color(hex: "#BF5AF2").opacity(0.8))
+                    Spacer()
+                    Button {
+                        let generator = UIImpactFeedbackGenerator(style: .light)
+                        generator.impactOccurred()
+                        store.markAsRead(news)
+                    } label: {
+                        Text("标记已读")
+                            .font(.caption.weight(.bold))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color(hex: "#00E5CC").opacity(0.2))
+                            .foregroundColor(Color(hex: "#00E5CC"))
+                            .cornerRadius(8)
+                    }
                 }
             }
         }
-        .transition(.asymmetric(
-            insertion: .scale.combined(with: .opacity),
-            removal: .move(edge: .trailing).combined(with: .opacity)
-        ))
     }
 }
 
-// MARK: - Resolved Alert Row
+// MARK: - Read News Row
 
-struct ResolvedAlertRow: View {
-    let alert: AgentAlert
-
-    var statusInfo: (icon: String, color: Color, label: String) {
-        switch alert.status {
-        case .approved: return ("checkmark.circle.fill", Color(hex: "#30D158"), "已授权")
-        case .rejected: return ("xmark.circle.fill", Color(hex: "#FF4D6D"), "已终止")
-        case .paused:   return ("pause.circle.fill", Color(hex: "#FF9500"), "已暂停")
-        default:        return ("questionmark.circle.fill", .secondary, "未知")
-        }
-    }
+struct ReadNewsRow: View {
+    let news: AINews
 
     var body: some View {
         GlassCard {
             HStack(spacing: 12) {
-                Image(systemName: statusInfo.icon)
+                Image(systemName: "checkmark.circle.fill")
                     .font(.title3)
-                    .foregroundColor(statusInfo.color)
+                    .foregroundColor(.secondary)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(alert.title)
+                    Text(news.title)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.white)
-                    Text(alert.description)
+                        .foregroundColor(.secondary)
+                    Text(news.description)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.secondary.opacity(0.6))
                         .lineLimit(1)
-                    Text(alert.timestamp.formatted(.relative(presentation: .named)))
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
                 }
                 Spacer()
-                Text(statusInfo.label)
-                    .font(.caption.weight(.semibold))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(statusInfo.color.opacity(0.15))
-                    .foregroundColor(statusInfo.color)
-                    .cornerRadius(8)
+                Text("已读")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
             }
         }
     }
@@ -193,52 +222,16 @@ struct ResolvedAlertRow: View {
 
 // MARK: - Sub-components
 
-struct RiskBadge: View {
-    let level: AgentAlert.RiskLevel
+struct CategoryBadge: View {
+    let label: String
 
     var body: some View {
-        Text(level.rawValue)
-            .font(.caption2.weight(.bold))
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(level.color.opacity(0.2))
-            .foregroundColor(level.color)
-            .cornerRadius(6)
-    }
-}
-
-struct ActionButton: View {
-    let title: String
-    let icon: String
-    let color: Color
-    let action: () -> Void
-    @State private var pressed = false
-
-    var body: some View {
-        Button(action: {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { pressed = true }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                withAnimation { pressed = false }
-                action()
-            }
-        }) {
-            HStack(spacing: 5) {
-                Image(systemName: icon)
-                    .font(.caption)
-                Text(title)
-                    .font(.caption.weight(.semibold))
-            }
-            .foregroundColor(color)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 9)
-            .background(color.opacity(0.15))
-            .cornerRadius(10)
-            .scaleEffect(pressed ? 0.92 : 1.0)
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(color.opacity(0.3), lineWidth: 1)
-            )
-        }
-        .frame(maxWidth: .infinity)
+        Text(label)
+            .font(.system(size: 10, weight: .bold))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Color.white.opacity(0.1))
+            .foregroundColor(.secondary)
+            .cornerRadius(4)
     }
 }

@@ -1,20 +1,20 @@
 //
 //  SkillsStoreView.swift
-//  龙虾监测站 — Tab 3: 技能商店
+//  龙虾AI导航 — Tab 3: 全部 AI 资源
 //
 
 import SwiftUI
 
 struct SkillsStoreView: View {
     @EnvironmentObject var store: AgentStore
-    @State private var selectedCategory: SkillCategory? = nil
-    @State private var selectedSkill: SkillPlugin? = nil
+    @State private var selectedCategory: ToolCategory? = nil
+    @State private var selectedTool: AITool? = nil
     @State private var searchText = ""
 
-    var filteredSkills: [SkillPlugin] {
-        store.allSkills.filter { skill in
-            let categoryMatch = selectedCategory == nil || skill.category == selectedCategory
-            let searchMatch = searchText.isEmpty || skill.name.localizedCaseInsensitiveContains(searchText) || skill.description.localizedCaseInsensitiveContains(searchText)
+    var filteredTools: [AITool] {
+        store.allTools.filter { tool in
+            let categoryMatch = selectedCategory == nil || tool.category == selectedCategory
+            let searchMatch = searchText.isEmpty || tool.name.localizedCaseInsensitiveContains(searchText) || tool.description.localizedCaseInsensitiveContains(searchText)
             return categoryMatch && searchMatch
         }
     }
@@ -28,7 +28,7 @@ struct SkillsStoreView: View {
                 HStack(spacing: 10) {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.secondary)
-                    TextField("搜索技能...", text: $searchText)
+                    TextField("搜索工具或分类...", text: $searchText)
                         .foregroundColor(.white)
                 }
                 .padding(12)
@@ -43,7 +43,7 @@ struct SkillsStoreView: View {
                         CategoryChip(label: "全部", icon: "square.grid.2x2.fill", color: Color(hex: "#00E5CC"), isSelected: selectedCategory == nil) {
                             withAnimation(.spring(response: 0.3)) { selectedCategory = nil }
                         }
-                        ForEach(SkillCategory.allCases, id: \.self) { cat in
+                        ForEach(ToolCategory.allCases, id: \.self) { cat in
                             CategoryChip(label: cat.rawValue, icon: cat.icon, color: cat.accentColor, isSelected: selectedCategory == cat) {
                                 withAnimation(.spring(response: 0.3)) {
                                     selectedCategory = (selectedCategory == cat) ? nil : cat
@@ -57,11 +57,11 @@ struct SkillsStoreView: View {
 
                 // Stats bar
                 HStack {
-                    Text("\(filteredSkills.count) 个技能")
+                    Text("\(filteredTools.count) 个资源项")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Spacer()
-                    Text("\(store.installedSkills.count) 已安装")
+                    Text("\(store.favoriteTools.count) 已收藏")
                         .font(.caption.weight(.semibold))
                         .foregroundColor(Color(hex: "#00E5CC"))
                 }
@@ -71,21 +71,21 @@ struct SkillsStoreView: View {
                 // Grid
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 12) {
-                        ForEach(filteredSkills) { skill in
-                            SkillCard(skill: skill)
-                                .onTapGesture { selectedSkill = skill }
+                        ForEach(filteredTools) { tool in
+                            ToolGridCard(tool: tool)
+                                .onTapGesture { selectedTool = tool }
                         }
                     }
                     .padding(.horizontal, 16)
                     .padding(.bottom, 24)
-                    .animation(.spring(response: 0.4), value: filteredSkills.count)
+                    .animation(.spring(response: 0.4), value: filteredTools.count)
                 }
             }
-            .navigationTitle("技能商店")
+            .navigationTitle("全部 AI 资源")
             .navigationBarTitleDisplayMode(.large)
         }
-        .sheet(item: $selectedSkill) { skill in
-            SkillDetailSheet(skill: skill)
+        .sheet(item: $selectedTool) { tool in
+            ToolDetailSheet(tool: tool)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
@@ -122,12 +122,12 @@ struct CategoryChip: View {
     }
 }
 
-// MARK: - Skill Card
+// MARK: - Tool Grid Card
 
-struct SkillCard: View {
+struct ToolGridCard: View {
     @EnvironmentObject var store: AgentStore
-    let skill: SkillPlugin
-    var isInstalled: Bool { store.installedSkills.contains(skill.id) }
+    let tool: AITool
+    var isFavorited: Bool { store.favoriteTools.contains(tool.id) }
 
     var body: some View {
         GlassCard {
@@ -135,45 +135,45 @@ struct SkillCard: View {
                 HStack {
                     ZStack {
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(skill.category.accentColor.opacity(0.18))
+                            .fill(tool.category.accentColor.opacity(0.18))
                             .frame(width: 38, height: 38)
-                        Image(systemName: skill.icon)
+                        Image(systemName: tool.icon)
                             .font(.system(size: 18))
-                            .foregroundColor(skill.category.accentColor)
+                            .foregroundColor(tool.category.accentColor)
                     }
                     Spacer()
-                    Toggle("", isOn: Binding(
-                        get: { isInstalled },
-                        set: { _ in store.toggleSkill(skill.id) }
-                    ))
-                    .labelsHidden()
-                    .tint(skill.category.accentColor)
-                    .scaleEffect(0.8)
+                    Button {
+                        store.toggleFavorite(tool.id)
+                    } label: {
+                        Image(systemName: isFavorited ? "heart.fill" : "heart")
+                            .font(.system(size: 14))
+                            .foregroundColor(isFavorited ? .red : .secondary)
+                    }
                 }
 
-                Text(skill.name)
+                Text(tool.name)
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(.white)
                     .lineLimit(1)
 
-                Text(skill.description)
+                Text(tool.description)
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .lineLimit(2)
 
                 HStack {
-                    Text(skill.category.rawValue)
+                    Text(tool.category.rawValue)
                         .font(.caption2)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
-                        .background(skill.category.accentColor.opacity(0.12))
-                        .foregroundColor(skill.category.accentColor)
+                        .background(tool.category.accentColor.opacity(0.12))
+                        .foregroundColor(tool.category.accentColor)
                         .cornerRadius(5)
                     Spacer()
-                    if isInstalled {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.caption)
-                            .foregroundColor(skill.category.accentColor)
+                    if isFavorited {
+                        Image(systemName: "star.fill")
+                            .font(.caption2)
+                            .foregroundColor(.yellow)
                     }
                 }
             }
@@ -181,13 +181,13 @@ struct SkillCard: View {
     }
 }
 
-// MARK: - Skill Detail Sheet
+// MARK: - Tool Detail Sheet
 
-struct SkillDetailSheet: View {
+struct ToolDetailSheet: View {
     @EnvironmentObject var store: AgentStore
-    let skill: SkillPlugin
+    let tool: AITool
     @Environment(\.dismiss) var dismiss
-    var isInstalled: Bool { store.installedSkills.contains(skill.id) }
+    var isFavorited: Bool { store.favoriteTools.contains(tool.id) }
 
     var body: some View {
         ZStack {
@@ -199,70 +199,103 @@ struct SkillDetailSheet: View {
                     HStack(spacing: 16) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(skill.category.accentColor.opacity(0.18))
+                                .fill(tool.category.accentColor.opacity(0.18))
                                 .frame(width: 64, height: 64)
-                            Image(systemName: skill.icon)
+                            Image(systemName: tool.icon)
                                 .font(.system(size: 30))
-                                .foregroundColor(skill.category.accentColor)
+                                .foregroundColor(tool.category.accentColor)
                         }
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(skill.name)
+                            Text(tool.name)
                                 .font(.title2.weight(.bold))
                                 .foregroundColor(.white)
-                            Text(skill.category.rawValue)
+                            Text(tool.category.rawValue)
                                 .font(.subheadline)
-                                .foregroundColor(skill.category.accentColor)
+                                .foregroundColor(tool.category.accentColor)
                         }
                     }
 
-                    Text(skill.description)
+                    Text(tool.description)
                         .font(.body)
                         .foregroundColor(.secondary)
                         .lineSpacing(4)
 
-                    // Permissions
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("所需权限")
-                            .font(.caption.weight(.semibold))
-                            .foregroundColor(.secondary)
-                        ForEach(skill.permissions, id: \.self) { perm in
-                            HStack(spacing: 8) {
-                                Image(systemName: "lock.shield.fill")
-                                    .font(.caption)
-                                    .foregroundColor(Color(hex: "#FF9500"))
-                                Text(perm)
-                                    .font(.subheadline)
-                                    .foregroundColor(.white)
-                            }
+                    // Tags
+                    FlowLayout(spacing: 8) {
+                        ForEach(tool.tags, id: \.self) { tag in
+                            Text(tag)
+                                .font(.caption.weight(.semibold))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(Color.white.opacity(0.08))
+                                .foregroundColor(.secondary)
+                                .cornerRadius(8)
                         }
                     }
-                    .padding(14)
-                    .background(Color.white.opacity(0.05))
-                    .cornerRadius(12)
 
-                    // Install button
+                    // URL section
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("官方地址")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(.secondary)
+                        HStack {
+                            Image(systemName: "link")
+                                .font(.caption)
+                                .foregroundColor(tool.category.accentColor)
+                            Text(tool.url)
+                                .font(.subheadline)
+                                .foregroundColor(.white)
+                                .lineLimit(1)
+                            Spacer()
+                            Image(systemName: "arrow.up.forward.app")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(14)
+                        .background(Color.white.opacity(0.05))
+                        .cornerRadius(12)
+                    }
+
+                    // Action button
                     Button(action: {
-                        store.toggleSkill(skill.id)
-                        dismiss()
+                        // Open URL simulation or favorite
+                        store.toggleFavorite(tool.id)
                     }) {
                         HStack {
-                            Image(systemName: isInstalled ? "trash.fill" : "plus.circle.fill")
-                            Text(isInstalled ? "卸载此技能" : "安装此技能")
+                            Image(systemName: isFavorited ? "heart.slash.fill" : "heart.fill")
+                            Text(isFavorited ? "从收藏中移除" : "添加到我的收藏")
                                 .fontWeight(.semibold)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(16)
-                        .background(isInstalled ? Color(hex: "#FF4D6D").opacity(0.2) : skill.category.accentColor.opacity(0.25))
-                        .foregroundColor(isInstalled ? Color(hex: "#FF4D6D") : skill.category.accentColor)
+                        .background(isFavorited ? Color.red.opacity(0.2) : tool.category.accentColor.opacity(0.25))
+                        .foregroundColor(isFavorited ? .red : tool.category.accentColor)
                         .cornerRadius(14)
                         .overlay(
                             RoundedRectangle(cornerRadius: 14)
-                                .stroke(isInstalled ? Color(hex: "#FF4D6D").opacity(0.5) : skill.category.accentColor.opacity(0.5), lineWidth: 1)
+                                .stroke(isFavorited ? Color.red.opacity(0.5) : tool.category.accentColor.opacity(0.5), lineWidth: 1)
                         )
                     }
                 }
                 .padding(24)
             }
+        }
+    }
+}
+
+// Simple FlowLayout for Tags
+struct FlowLayout<Content: View>: View {
+    let spacing: CGFloat
+    let content: () -> Content
+    
+    init(spacing: CGFloat, @ViewBuilder content: @escaping () -> Content) {
+        self.spacing = spacing
+        self.content = content
+    }
+    
+    var body: some View {
+        HStack(spacing: spacing) {
+            content()
         }
     }
 }

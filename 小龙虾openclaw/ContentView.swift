@@ -1,6 +1,6 @@
 //
 //  ContentView.swift
-//  龙虾监测站 — Main Tab Container
+//  龙虾AI导航 — Main Tab Container
 //
 
 import SwiftUI
@@ -22,26 +22,26 @@ struct ContentView: View {
             TabView(selection: $selectedTab) {
                 DashboardView()
                     .tabItem {
-                        Label("状态看板", systemImage: "waveform.path.ecg")
+                        Label("推荐导航", systemImage: "safari.fill")
                     }
                     .tag(0)
 
                 InterventionView()
                     .tabItem {
-                        Label("远程干预", systemImage: "bell.badge.fill")
+                        Label("动态广场", systemImage: "square.grid.2x2.fill")
                     }
                     .tag(1)
-                    .badge(store.pendingAlerts.count > 0 ? store.pendingAlerts.count : 0)
+                    .badge(store.pendingNews.count > 0 ? store.pendingNews.count : 0)
 
                 SkillsStoreView()
                     .tabItem {
-                        Label("技能商店", systemImage: "square.grid.2x2.fill")
+                        Label("全部资源", systemImage: "list.bullet.indent")
                     }
                     .tag(2)
 
                 SettingsView()
                     .tabItem {
-                        Label("设置", systemImage: "gearshape.fill")
+                        Label("个人中心", systemImage: "person.crop.circle.fill")
                     }
                     .tag(3)
             }

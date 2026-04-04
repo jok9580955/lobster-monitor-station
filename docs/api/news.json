@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "updated": "2026-04-04T19:00:00+08:00",
+  "news": [
+    {
+      "id": "n001",
+      "title": "DeepSeek R2 模型震撼发布",
+      "description": "DeepSeek 全新推理模型 R2 正式亮相，多项基准测试超越 GPT-4o，代码生成与数学推理能力大幅跃升，标志着国产大模型进入全新阶段。",
+      "category": "模型热点",
+      "url": "https://www.deepseek.com",
+      "timestamp": "2026-04-04T10:00:00+08:00"
+    },
+    {
+      "id": "n002",
+      "title": "Claude 4 Opus 发布：代码能力再度进化",
+      "description": "Anthropic 发布 Claude 4 Opus，在复杂推理、超长上下文理解和代码生成方面实现重大突破，支持 100 万 token 上下文窗口。",
+      "category": "模型热点",
+      "url": "https://www.anthropic.com",
+      "timestamp": "2026-04-04T08:30:00+08:00"
+    },
+    {
+      "id": "n003",
+      "title": "Manus 通用智能体覆盖 50+ 行业场景",
+      "description": "Manus AI 宣布其通用智能体已成功部署到金融、医疗、法律等 50+ 行业，实现从任务规划到执行的全自动闭环。",
+      "category": "智能体",
+      "url": "https://manus.ai",
+      "timestamp": "2026-04-03T16:00:00+08:00"
+    },
+    {
+      "id": "n004",
+      "title": "Sora 视频生成正式开放 API",
+      "description": "OpenAI 正式开放 Sora 视频生成 API，开发者可通过 API 调用生成高质量 60 秒视频，支持多风格与精准运镜控制。",
+      "category": "技术突破",
+      "url": "https://openai.com/sora",
+      "timestamp": "2026-04-03T12:00:00+08:00"
+    },
+    {
+      "id": "n005",
+      "title": "Kimi 长文本处理突破 1000 万字",
+      "description": "Moonshot AI 宣布 Kimi 模型上下文窗口正式突破 1000 万字，可在数秒内处理整本百科全书级别的文档。",
+      "category": "技术突破",
+      "url": "https://kimi.moonshot.cn",
+      "timestamp": "2026-04-03T09:00:00+08:00"
+    },
+    {
+      "id": "n006",
+      "title": "SiliconFlow 推出免费模型推理额度",
+      "description": "硅基流动宣布为所有开发者提供每月 100 万 token 免费推理额度，覆盖 DeepSeek、Qwen、Llama 等 200+ 开源模型。",
+      "category": "生态报告",
+      "url": "https://siliconflow.cn",
+      "timestamp": "2026-04-02T18:00:00+08:00"
+    },
+    {
+      "id": "n007",
+      "title": "Midjourney V7 预览：超写实影像新高度",
+      "description": "Midjourney 发布 V7 预览版，在人像质感、光影物理模拟和细节层次方面达到照片级水准，模糊了 AI 生成与真实摄影的边界。",
+      "category": "工具更新",
+      "url": "https://midjourney.com",
+      "timestamp": "2026-04-02T14:00:00+08:00"
+    },
+    {
+      "id": "n008",
+      "title": "Apple Intelligence 全面进入中国市场",
+      "description": "苹果宣布 Apple Intelligence 将在 iOS 20 中全面支持中文，包括写作工具、Siri 增强和图像生成，与百度达成本地化合作。",
+      "category": "行业动态",
+      "url": "https://www.apple.com/apple-intelligence",
+      "timestamp": "2026-04-02T10:00:00+08:00"
+    }
+  ]
+}

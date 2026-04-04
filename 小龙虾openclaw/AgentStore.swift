@@ -1,6 +1,6 @@
 //
 //  AgentStore.swift
-//  龙虾监测站 — Global Data Model
+//  龙虾AI导航 — Global Navigation Portal
 //
 
 import SwiftUI
@@ -8,76 +8,74 @@ import Combine
 
 // MARK: - Models
 
-struct AgentAlert: Identifiable {
+struct AINews: Identifiable {
     let id = UUID()
+    let remoteId: String?
     let title: String
     let description: String
-    let riskLevel: RiskLevel
+    let category: String
     let timestamp: Date
-    var status: AlertStatus = .pending
+    var isRead: Bool = false
+    let url: String?
 
-    enum RiskLevel: String {
-        case low = "低风险"
-        case medium = "中风险"
-        case high = "高风险"
-
-        var color: Color {
-            switch self {
-            case .low: return .green
-            case .medium: return Color.orange
-            case .high: return Color(hex: "#FF4D6D")
-            }
-        }
-    }
-
-    enum AlertStatus {
-        case pending, approved, rejected, paused
+    init(remoteId: String? = nil, title: String, description: String, category: String, timestamp: Date, isRead: Bool = false, url: String? = nil) {
+        self.remoteId = remoteId
+        self.title = title
+        self.description = description
+        self.category = category
+        self.timestamp = timestamp
+        self.isRead = isRead
+        self.url = url
     }
 }
 
-struct TaskLog: Identifiable {
+struct ToolLog: Identifiable {
     let id = UUID()
-    let step: String
+    let toolName: String
     let timestamp: Date
-    let duration: String
+    let action: String
 }
 
-struct SkillPlugin: Identifiable {
+struct AITool: Identifiable {
     let id: String
     let name: String
     let description: String
     let icon: String
-    let category: SkillCategory
-    let permissions: [String]
+    let category: ToolCategory
+    let url: String
+    let tags: [String]
 }
 
-enum SkillCategory: String, CaseIterable {
-    case factory = "工厂/制造"
-    case medical = "医药健康"
-    case culture = "文化传统"
-    case ecommerce = "电商"
-    case finance = "财务"
-    case general = "通用"
+enum ToolCategory: String, CaseIterable {
+    case language = "大语言模型"
+    case image = "AI 图像绘画"
+    case video = "AI 视频制作"
+    case autonomous = "智能体/Agent"
+    case infrastructure = "基础设施/MaaS"
+    case code = "编程/开发"
+    case skillMarket = "技能市场"
 
     var icon: String {
         switch self {
-        case .factory: return "gearshape.2.fill"
-        case .medical: return "cross.case.fill"
-        case .culture: return "book.closed.fill"
-        case .ecommerce: return "cart.fill"
-        case .finance: return "chart.pie.fill"
-        case .general: return "sparkles"
+        case .language: return "message.fill"
+        case .image: return "paintpalette.fill"
+        case .video: return "video.fill"
+        case .autonomous: return "brain.head.profile"
+        case .infrastructure: return "cloud.fill"
+        case .code: return "terminal.fill"
+        case .skillMarket: return "square.grid.2x2.fill"
         }
     }
 
     var accentColor: Color {
         switch self {
-        case .factory: return Color(hex: "#FF9500")
-        case .medical: return Color(hex: "#30D158")
-        case .culture: return Color(hex: "#BF5AF2")
-        case .ecommerce: return Color(hex: "#00E5CC")
-        case .finance: return Color(hex: "#FFD60A")
-        case .general: return Color(hex: "#0A84FF")
+        case .language: return Color(hex: "#00E5CC")
+        case .image: return Color(hex: "#BF5AF2")
+        case .video: return Color(hex: "#FF4D6D")
+        case .autonomous: return Color(hex: "#FFD60A")
+        case .infrastructure: return Color(hex: "#0A84FF")
+        case .code: return Color(hex: "#30D158")
+        case .skillMarket: return Color(hex: "#FF9500")
         }
     }
 }
@@ -87,51 +85,106 @@ enum SkillCategory: String, CaseIterable {
 @MainActor
 class AgentStore: ObservableObject {
 
-    // Dashboard state
-    @Published var cpuUsage: Double = 0.32
-    @Published var gpuUsage: Double = 0.18
-    @Published var tokenUsed: Int = 4820
-    @Published var tokenLimit: Int = 16000
-    @Published var isAgentRunning: Bool = true
-    @Published var currentTaskText: String = "正在初始化龙虾Agent..."
-    @Published var taskHistory: [TaskLog] = []
+    // Global portal state
+    @Published var networkStatus: Double = 0.98
+    @Published var activeUsers: Int = 772480
+    @Published var hotToolsUsed: Int = 14820
+    @Published var toolLimit: Int = 100000
+    @Published var isPortalLive: Bool = true
+    @Published var trendingToolName: String = "正在分析全网 AI 活跃度..."
+    @Published var naviHistory: [ToolLog] = []
 
-    // Intervention state
-    @Published var pendingAlerts: [AgentAlert] = []
-    @Published var resolvedAlerts: [AgentAlert] = []
+    // Feed / News state
+    @Published var pendingNews: [AINews] = []
+    @Published var readNews: [AINews] = []
+    @Published var isLoadingNews: Bool = false
+    @Published var newsError: String? = nil
 
-    // Skills state
-    @Published var installedSkills: Set<String> = ["smt_order", "web_summary", "price_compare"]
-    let allSkills: [SkillPlugin] = SkillPlugin.catalog
+    // Tools state
+    @Published var favoriteTools: Set<String> = [] {
+        didSet { saveFavorites() }
+    }
+    let allTools: [AITool] = AITool.catalog
 
     private var timer: AnyCancellable?
-    private var cotIndex = 0
+    private var newsIndex = 0
 
-    let cotPhrases: [String] = [
-        "正在比价机票 DAL→PVG...",
-        "正在分析 SMT 贴片订单数据...",
-        "正在抓取竞品价格信息...",
-        "正在生成供应链优化报告...",
-        "正在核对药品库存与有效期...",
-        "正在查询《菜根谭》相关典故...",
-        "正在识别并分类上传发票...",
-        "正在追踪物流信息 SF-9087654...",
-        "正在汇总客户评价情感分析...",
-        "正在规划明日工作日程...",
-        "正在执行网页内容摘要提取...",
-        "等待用户授权支付操作..."
+    let newsPhrases: [String] = [
+        "OpenClaw 平台活跃 Agent 突破 77 万...",
+        "DeepSeek 思考模型推理能力全球领先...",
+        "Manus 通用智能体开启全自动任务规划...",
+        "OpenClaw AI 升级：推理速度提升 30%...",
+        "AI 代理实现可穿戴设备血氧预警...",
+        "SiliconFlow 提供 200+ 开源模型接口...",
+        "Kimi 智能助手月度访问突破千万...",
+        "Claude 4 Opus 代码生成再度进化...",
+        "Luma Dream Machine 视频生成质量飞跃...",
+        "OpenRouter 全球模型聚合平台更新..."
     ]
 
+    // MARK: - Favorites Persistence
+
+    private let favoritesKey = "lobster_favorite_tools"
+
+    private func loadFavorites() {
+        if let data = UserDefaults.standard.data(forKey: favoritesKey),
+           let saved = try? JSONDecoder().decode(Set<String>.self, from: data) {
+            favoriteTools = saved
+        } else {
+            favoriteTools = ["open_claw", "deep_seek", "manus_ai"]
+        }
+    }
+
+    private func saveFavorites() {
+        if let data = try? JSONEncoder().encode(favoriteTools) {
+            UserDefaults.standard.set(data, forKey: favoritesKey)
+        }
+    }
+
+    // MARK: - Init
+
     init() {
-        seedMockAlerts()
-        seedTaskHistory()
+        loadFavorites()
+        seedNaviHistory()
         startSimulation()
+        // Load cloud news
+        Task {
+            await loadNews()
+        }
+    }
+
+    // MARK: - News
+
+    func loadNews() async {
+        isLoadingNews = true
+        newsError = nil
+
+        let cloudNews = await NewsService.shared.fetchLatestNews()
+
+        if cloudNews.isEmpty {
+            // Fallback to mock data if network fails and no cache
+            if pendingNews.isEmpty {
+                seedMockNews()
+            }
+            newsError = "无法连接云端，显示本地数据"
+        } else {
+            withAnimation(.spring()) {
+                pendingNews = cloudNews
+                readNews = []
+            }
+        }
+
+        isLoadingNews = false
+    }
+
+    func refreshNews() async {
+        await loadNews()
     }
 
     // MARK: - Simulation
 
     func startSimulation() {
-        timer = Timer.publish(every: 2.5, on: .main, in: .common)
+        timer = Timer.publish(every: 3.5, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
                 self?.tick()
@@ -140,129 +193,93 @@ class AgentStore: ObservableObject {
 
     private func tick() {
         withAnimation(.easeInOut(duration: 0.8)) {
-            cpuUsage = Double.random(in: 0.18...0.88)
-            gpuUsage = Double.random(in: 0.05...0.72)
-            tokenUsed = min(tokenUsed + Int.random(in: 50...350), tokenLimit)
+            networkStatus = Double.random(in: 0.9...0.99)
+            activeUsers = activeUsers + Int.random(in: 10...150)
+            hotToolsUsed = min(hotToolsUsed + Int.random(in: 5...25), toolLimit)
         }
-        cotIndex = (cotIndex + 1) % cotPhrases.count
+        newsIndex = (newsIndex + 1) % newsPhrases.count
         withAnimation(.easeIn(duration: 0.4)) {
-            currentTaskText = cotPhrases[cotIndex]
+            trendingToolName = newsPhrases[newsIndex]
         }
     }
 
-    // MARK: - Intervention Actions
+    // MARK: - News Actions
 
-    func approve(_ alert: AgentAlert) {
-        resolve(alert, status: .approved)
-    }
-
-    func reject(_ alert: AgentAlert) {
-        resolve(alert, status: .rejected)
-    }
-
-    func pause(_ alert: AgentAlert) {
-        resolve(alert, status: .paused)
-    }
-
-    private func resolve(_ alert: AgentAlert, status: AgentAlert.AlertStatus) {
-        if let idx = pendingAlerts.firstIndex(where: { $0.id == alert.id }) {
-            var resolved = pendingAlerts[idx]
-            resolved.status = status
+    func markAsRead(_ news: AINews) {
+        if let idx = pendingNews.firstIndex(where: { $0.id == news.id }) {
+            var updated = pendingNews[idx]
+            updated.isRead = true
             withAnimation(.spring()) {
-                pendingAlerts.remove(at: idx)
-                resolvedAlerts.insert(resolved, at: 0)
+                pendingNews.remove(at: idx)
+                readNews.insert(updated, at: 0)
             }
         }
     }
 
-    // MARK: - Skills
+    // MARK: - Tools
 
-    func toggleSkill(_ skillId: String) {
+    func toggleFavorite(_ toolId: String) {
         withAnimation(.spring(response: 0.35)) {
-            if installedSkills.contains(skillId) {
-                installedSkills.remove(skillId)
+            if favoriteTools.contains(toolId) {
+                favoriteTools.remove(toolId)
             } else {
-                installedSkills.insert(skillId)
+                favoriteTools.insert(toolId)
             }
         }
     }
 
     // MARK: - Seeds
 
-    private func seedMockAlerts() {
-        pendingAlerts = [
-            AgentAlert(
-                title: "支付授权请求",
-                description: "Agent 请求通过支付宝向「某供应商」付款 ¥12,800，用于采购SMT元器件。",
-                riskLevel: .high,
-                timestamp: Date().addingTimeInterval(-180)
-            ),
-            AgentAlert(
-                title: "高频API调用告警",
-                description: "过去5分钟内API调用次数达到 480次，超过阈值(300次/5min)。是否继续？",
-                riskLevel: .medium,
-                timestamp: Date().addingTimeInterval(-95)
-            ),
-            AgentAlert(
-                title: "文件批量删除确认",
-                description: "Agent 即将删除 /reports/2025_Q4/ 目录下共 234 个旧报告文件。",
-                riskLevel: .high,
-                timestamp: Date().addingTimeInterval(-40)
-            ),
-            AgentAlert(
-                title: "外部邮件发送申请",
-                description: "准备向客户列表发送营销邮件，共 1,240 名收件人。",
-                riskLevel: .low,
-                timestamp: Date().addingTimeInterval(-10)
-            )
+    private func seedMockNews() {
+        pendingNews = [
+            AINews(title: "OpenClaw 平台活跃突破 77 万", description: "随着生态迅速扩张，平台公布了最新的安全风险评估与系统升级方案。 ", category: "生态报告", timestamp: Date().addingTimeInterval(-1800)),
+            AINews(title: "AI 代理实现血氧异常预警", description: "OpenClaw AI 代理成功集成健康监测功能，能够实时分析并预警血氧异常。", category: "技术突破", timestamp: Date().addingTimeInterval(-3600)),
+            AINews(title: "OpenClaw AI Agent 重大升级", description: "新版本推理速度提升 30%，多模态调度能力显著增强。", category: "版本更新", timestamp: Date().addingTimeInterval(-7200)),
+            AINews(title: "DeepSeek 当前最火的国产模型", description: "强化 Agent 能力，融入思考推理，引领国产大模型进入 2.0 时代。", category: "模型热点", timestamp: Date().addingTimeInterval(-10800))
         ]
     }
 
-    private func seedTaskHistory() {
+    private func seedNaviHistory() {
         let items = [
-            ("提取竞品价格数据", "2m 14s"),
-            ("生成周度销售报表", "45s"),
-            ("翻译产品说明书（EN→ZH）", "1m 03s"),
-            ("更新库存预警规则", "22s"),
-            ("抓取行业新闻摘要", "58s"),
+            ("OpenClaw", "官方访问"),
+            ("DeepSeek", "模型调研"),
+            ("Manus AI", "计划执行"),
+            ("SiliconFlow", "接口同步"),
+            ("ClawHub", "技能拉取"),
         ]
-        taskHistory = items.enumerated().map { i, item in
-            TaskLog(step: item.0, timestamp: Date().addingTimeInterval(Double(-(i+1) * 600)), duration: item.1)
+        naviHistory = items.enumerated().map { i, item in
+            ToolLog(toolName: item.0, timestamp: Date().addingTimeInterval(Double(-(i+1) * 3600)), action: item.1)
         }
     }
 }
 
-// MARK: - SkillPlugin Catalog
+// MARK: - AITool Catalog
 
-extension SkillPlugin {
-    static let catalog: [SkillPlugin] = [
-        // Factory
-        SkillPlugin(id: "smt_order", name: "SMT订单管理", description: "自动追踪、解析SMT贴片工厂的订单状态与交货进度。", icon: "cpu.fill", category: .factory, permissions: ["文件读取", "网络请求"]),
-        SkillPlugin(id: "inventory_alert", name: "库存预警", description: "实时监控原材料库存水位，低于阈值时自动告警并发起采购申请。", icon: "exclamationmark.triangle.fill", category: .factory, permissions: ["数据库读写", "推送通知"]),
-        SkillPlugin(id: "supply_chain", name: "供应链优化", description: "分析供应商交货周期与成本，给出最优采购策略建议。", icon: "arrow.triangle.branch", category: .factory, permissions: ["网络请求", "数据分析"]),
+extension AITool {
+    static let catalog: [AITool] = [
+        // Autonomous
+        AITool(id: "open_claw", name: "OpenClaw", description: "开源、本地优先的自主 AI 助手，支持全自动任务处理。", icon: "sparkles", category: .autonomous, url: "https://openclaw.ai", tags: ["官方", "核心"]),
+        AITool(id: "manus_ai", name: "Manus", description: "通用型 AI 智能体，具备从任务规划到执行的全流程自动化能力。", icon: "brain.head.profile", category: .autonomous, url: "https://manus.ai", tags: ["极客", "高智"]),
+        AITool(id: "devin_ai", name: "Devin", description: "全球首位 AI 软件工程师，能够独立完成编程任务并学习新技术。", icon: "terminal.fill", category: .autonomous, url: "https://www.cognition-labs.com", tags: ["工程师", "黑科技"]),
+        AITool(id: "mule_run", name: "MuleRun", description: "全球首个自进化个人 AI，实时学习用户习惯与偏好。", icon: "bolt.fill", category: .autonomous, url: "https://mule.run", tags: ["自进化", "私人"]),
 
-        // Medical
-        SkillPlugin(id: "drug_query", name: "药品查询", description: "查询药品说明书、适应症、禁忌及库存有效期信息。", icon: "pills.fill", category: .medical, permissions: ["网络请求"]),
-        SkillPlugin(id: "patient_followup", name: "患者随访助手", description: "自动发送随访提醒，汇总患者反馈并生成报告。", icon: "person.crop.circle.badge.checkmark", category: .medical, permissions: ["推送通知", "联系人"]),
+        // Language
+        AITool(id: "deep_seek", name: "DeepSeek", description: "强化 Agent 能力，融入思考推理，国产大模型之光。", icon: "sparkles", category: .language, url: "https://www.deepseek.com", tags: ["热门", "国产"]),
+        AITool(id: "kimi_assistant", name: "Kimi (Moonshot)", description: "擅长超长上下文处理与视觉推理，长文本理解行业领先。", icon: "moon.fill", category: .language, url: "https://kimi.moonshot.cn", tags: ["长文本", "无损"]),
+        AITool(id: "gpt_openai", name: "GPT (OpenAI)", description: "具备原生计算机使用能力，引领行业标准的旗舰模型。", icon: "sparkles", category: .language, url: "https://chatgpt.com", tags: ["标杆", "全能"]),
 
-        // Culture
-        SkillPlugin(id: "caigentan", name: "菜根谭语录", description: "每日推送《菜根谭》原文、注解与现代启示，传承传统智慧。", icon: "text.book.closed.fill", category: .culture, permissions: ["推送通知"]),
-        SkillPlugin(id: "solar_terms", name: "传统节气", description: "基于二十四节气提供养生建议、农事提醒及文化典故。", icon: "sun.max.fill", category: .culture, permissions: ["位置(模糊)"]),
-        SkillPlugin(id: "hanzi_origin", name: "汉字溯源", description: "分析汉字字形演变与文化含义，辅助内容创作与教育。", icon: "textformat.characters", category: .culture, permissions: ["网络请求"]),
+        // Infrastructure
+        AITool(id: "silicon_flow", name: "硅基流动 (SiliconFlow)", description: "提供 200+ 开源模型的统一 API 接口，性能稳定成本低。", icon: "cloud.fill", category: .infrastructure, url: "https://siliconflow.cn", tags: ["开发者", "MaaS"]),
+        AITool(id: "open_router", name: "OpenRouter", description: "全球模型聚合平台，支持一键切换不同模型并按需付费。", icon: "network", category: .infrastructure, url: "https://openrouter.ai", tags: ["全聚合", "API"]),
+        AITool(id: "aliyun_bailian", name: "阿里云百炼", description: "企业级大模型服务平台，整合阿里系最强 AI 能力。", icon: "cloud.sun.fill", category: .infrastructure, url: "https://bailian.aliyun.com", tags: ["企业级", "稳定"]),
 
-        // Ecommerce
-        SkillPlugin(id: "price_compare", name: "比价助手", description: "跨平台实时比较商品价格，追踪价格历史趋势。", icon: "tag.fill", category: .ecommerce, permissions: ["网络请求"]),
-        SkillPlugin(id: "review_analysis", name: "评价分析", description: "对商品评论进行情感分析，提炼用户核心关切点。", icon: "star.bubble.fill", category: .ecommerce, permissions: ["网络请求", "数据分析"]),
-        SkillPlugin(id: "logistics", name: "物流追踪", description: "聚合多家快递公司接口，统一追踪所有在途包裹。", icon: "shippingbox.fill", category: .ecommerce, permissions: ["网络请求"]),
+        // Skill Market
+        AITool(id: "claw_hub", name: "ClawHub", description: "OpenClaw 官方技能市场，海量自动化工作流下载。", icon: "square.grid.2x2.fill", category: .skillMarket, url: "https://openclaw.ai/hub", tags: ["官方", "生态"]),
+        AITool(id: "skill_hub_tx", name: "SkillHub (腾讯云)", description: "专为中国用户优化的本地化技能平台，响应迅速。", icon: "bolt.horizontal.circle.fill", category: .skillMarket, url: "https://skillhub.tencent.com", tags: ["本地化", "高效"]),
 
-        // Finance
-        SkillPlugin(id: "bookkeeping", name: "记账助手", description: "自动归类账单，生成月度收支报表，支持多账户管理。", icon: "dollarsign.circle.fill", category: .finance, permissions: ["文件读取"]),
-        SkillPlugin(id: "invoice_scan", name: "发票识别", description: "OCR识别纸质/电子发票，自动录入报销系统。", icon: "doc.text.viewfinder", category: .finance, permissions: ["相机", "文件读写"]),
-
-        // General
-        SkillPlugin(id: "web_summary", name: "网页摘要", description: "一键提取任意网页的核心内容，生成结构化摘要。", icon: "globe.badge.chevron.backward", category: .general, permissions: ["网络请求"]),
-        SkillPlugin(id: "file_translate", name: "文件翻译", description: "批量翻译文档，支持PDF/Word/Excel，保留原始排版。", icon: "doc.badge.gearshape.fill", category: .general, permissions: ["文件读写"]),
-        SkillPlugin(id: "schedule", name: "日程规划", description: "根据任务优先级和截止日期，自动编排最优工作日程。", icon: "calendar.badge.clock", category: .general, permissions: ["日历", "提醒事项"]),
+        // Video & Image
+        AITool(id: "runway_video", name: "Runway", description: "领先的 AI 视频生成平台，支持生成、修剪与特效增强。", icon: "video.fill", category: .video, url: "https://runwayml.com", tags: ["视频", "创作"]),
+        AITool(id: "midjourney_art", name: "Midjourney", description: "顶级 AI 绘画平台，艺术感与画质行业标杆。", icon: "paintpalette.fill", category: .image, url: "https://midjourney.com", tags: ["艺术", "标杆"]),
     ]
 }
 
@@ -273,17 +290,15 @@ extension Color {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         var int: UInt64 = 0
         Scanner(string: hex).scanHexInt64(&int)
-        let a, r, g, b: UInt64
+        let r, g, b: UInt64
         switch hex.count {
         case 3:
-            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
+            (r, g, b) = ((int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
         case 6:
-            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
-        case 8:
-            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
+            (r, g, b) = (int >> 16, int >> 8 & 0xFF, int & 0xFF)
         default:
-            (a, r, g, b) = (255, 0, 0, 0)
+            (r, g, b) = (0, 0, 0)
         }
-        self.init(.sRGB, red: Double(r)/255, green: Double(g)/255, blue: Double(b)/255, opacity: Double(a)/255)
+        self.init(.sRGB, red: Double(r)/255, green: Double(g)/255, blue: Double(b)/255, opacity: 1)
     }
 }

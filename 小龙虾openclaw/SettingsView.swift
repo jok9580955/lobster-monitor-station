@@ -1,38 +1,26 @@
 //
 //  SettingsView.swift
-//  龙虾监测站 — Tab 4: 设置
+//  龙虾AI导航 — Tab 4: 个人中心
 //
 
 import SwiftUI
 
 struct SettingsView: View {
-    @AppStorage("agentHost") private var agentHost = "http://localhost:8765"
     @AppStorage("apiKey") private var apiKey = ""
     @AppStorage("pushEnabled") private var pushEnabled = true
-    @AppStorage("cpuThreshold") private var cpuThreshold = 0.8
-    @AppStorage("tokenThreshold") private var tokenThreshold = 0.75
+    @AppStorage("autoRefresh") private var autoRefresh = true
+    @AppStorage("displayMode") private var displayMode = 0 // 0: Auto, 1: Dark, 2: Light
     @State private var showingAPIKey = false
-    @State private var showingAbout = false
+    @State private var showClearConfirm = false
 
     var body: some View {
         NavigationStack {
             List {
                 // Connection section
                 Section {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Label("Agent 主机地址", systemImage: "network")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        TextField("http://", text: $agentHost)
-                            .font(.system(.subheadline, design: .monospaced))
-                            .foregroundColor(Color(hex: "#00E5CC"))
-                            .autocorrectionDisabled()
-                            .textInputAutocapitalization(.never)
-                    }
-                    .listRowBackground(Color.white.opacity(0.05))
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Label("API Key", systemImage: "key.fill")
+                        Label("私有访问密钥 (API Key)", systemImage: "key.fill")
                             .font(.caption)
                             .foregroundColor(.secondary)
                         HStack {
@@ -57,94 +45,73 @@ struct SettingsView: View {
                     .listRowBackground(Color.white.opacity(0.05))
 
                     HStack {
-                        Label("连接状态", systemImage: "wifi")
+                        Label("云端同步状态", systemImage: "icloud.and.arrow.up.fill")
                         Spacer()
                         HStack(spacing: 4) {
                             Circle()
                                 .fill(Color(hex: "#30D158"))
                                 .frame(width: 7, height: 7)
-                            Text("已连接")
+                            Text("同步中")
                                 .font(.caption)
                                 .foregroundColor(Color(hex: "#30D158"))
                         }
                     }
                     .listRowBackground(Color.white.opacity(0.05))
                 } header: {
-                    Text("连接配置")
+                    Text("服务配置")
                 }
 
-                // Notifications section
+                // General section
                 Section {
                     Toggle(isOn: $pushEnabled) {
-                        Label("推送通知", systemImage: "bell.badge.fill")
+                        Label("每日动态推送", systemImage: "bell.badge.fill")
                     }
                     .tint(Color(hex: "#00E5CC"))
                     .listRowBackground(Color.white.opacity(0.05))
 
-                    if pushEnabled {
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack {
-                                Label("CPU 警戒阈值", systemImage: "cpu.fill")
-                                    .font(.subheadline)
-                                Spacer()
-                                Text(String(format: "%.0f%%", cpuThreshold * 100))
-                                    .font(.subheadline.monospacedDigit())
-                                    .foregroundColor(Color(hex: "#00E5CC"))
-                            }
-                            Slider(value: $cpuThreshold, in: 0.5...0.99, step: 0.05)
-                                .tint(Color(hex: "#FF4D6D"))
-                        }
-                        .listRowBackground(Color.white.opacity(0.05))
-
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack {
-                                Label("Token 警戒阈值", systemImage: "bolt.fill")
-                                    .font(.subheadline)
-                                Spacer()
-                                Text(String(format: "%.0f%%", tokenThreshold * 100))
-                                    .font(.subheadline.monospacedDigit())
-                                    .foregroundColor(Color(hex: "#00E5CC"))
-                            }
-                            Slider(value: $tokenThreshold, in: 0.5...0.99, step: 0.05)
-                                .tint(Color(hex: "#FFD60A"))
-                        }
-                        .listRowBackground(Color.white.opacity(0.05))
+                    Toggle(isOn: $autoRefresh) {
+                        Label("自动刷新导航热度", systemImage: "arrow.clockwise.circle.fill")
                     }
+                    .tint(Color(hex: "#BF5AF2"))
+                    .listRowBackground(Color.white.opacity(0.05))
+
+                    Picker(selection: $displayMode, label: Label("外观模式", systemImage: "paintbrush.fill")) {
+                        Text("跟随系统").tag(0)
+                        Text("深色模式").tag(1)
+                        Text("浅色模式").tag(2)
+                    }
+                    .listRowBackground(Color.white.opacity(0.05))
                 } header: {
-                    Text("通知与告警")
+                    Text("动态与推送")
                 }
 
                 // About section
                 Section {
                     HStack {
-                        Label("版本", systemImage: "info.circle.fill")
+                        Label("当前版本", systemImage: "info.circle.fill")
                         Spacer()
-                        Text("1.0.0 (Build 1)")
+                        Text("v2.0.0 (Gold)")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
                     .listRowBackground(Color.white.opacity(0.05))
 
                     HStack {
-                        Label("技术栈", systemImage: "swift")
+                        Label("龙虾 AI 旗舰版", systemImage: "crown.fill")
                         Spacer()
-                        Text("SwiftUI · Combine")
+                        Text("已激活")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color(hex: "#FFD60A"))
                     }
                     .listRowBackground(Color.white.opacity(0.05))
 
-                    HStack {
-                        Label("OpenClaw 版本", systemImage: "waveform")
-                        Spacer()
-                        Text("v2.4.1-beta")
-                            .font(.subheadline)
-                            .foregroundColor(Color(hex: "#00E5CC"))
+                    Link(destination: URL(string: "https://jok9580955.github.io/lobster-monitor-station/")!) {
+                        Label("隐私政策", systemImage: "hand.raised.fill")
                     }
                     .listRowBackground(Color.white.opacity(0.05))
 
-                    Button(action: {}) {
-                        Label("重置所有设置", systemImage: "arrow.counterclockwise")
+                    Button(action: { showClearConfirm = true }) {
+                        Label("清除本地缓存", systemImage: "trash")
                             .foregroundColor(Color(hex: "#FF4D6D"))
                     }
                     .listRowBackground(Color.white.opacity(0.05))
@@ -155,12 +122,11 @@ struct SettingsView: View {
                 // Footer branding
                 Section {
                     VStack(spacing: 8) {
-                        Text("🦞")
-                            .font(.system(size: 32))
-                        Text("龙虾监测站")
+                        LobsterLogo(size: 48)
+                        Text("龙虾 AI 导航")
                             .font(.headline)
                             .foregroundColor(.white)
-                        Text("OpenClaw Agent 移动指挥部")
+                        Text("探索 AI 生产力的终极入口")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -171,8 +137,19 @@ struct SettingsView: View {
             }
             .scrollContentBackground(.hidden)
             .listStyle(.insetGrouped)
-            .navigationTitle("设置")
+            .navigationTitle("个人中心")
             .navigationBarTitleDisplayMode(.large)
+            .alert("清除缓存", isPresented: $showClearConfirm) {
+                Button("取消", role: .cancel) { }
+                Button("清除", role: .destructive) {
+                    NewsService.shared.clearCache()
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.success)
+                }
+            } message: {
+                Text("清除所有本地缓存数据？下次打开将重新从云端同步。")
+            }
         }
     }
 }
+

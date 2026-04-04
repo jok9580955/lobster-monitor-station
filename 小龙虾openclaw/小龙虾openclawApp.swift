@@ -1,12 +1,12 @@
 //
-//  小龙虾openclawApp.swift
-//  龙虾监测站 — Agent Command Center
+//  LobsterAINavigationApp.swift
+//  龙虾AI导航 — Portal Command Center
 //
 
 import SwiftUI
 
 @main
-struct 小龙虾openclawApp: App {
+struct LobsterAINavigationApp: App {
     @StateObject private var agentStore = AgentStore()
 
     var body: some Scene {
